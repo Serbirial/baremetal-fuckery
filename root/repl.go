@@ -1,25 +1,34 @@
+// root/repl.go
 package root
 
 import "drivers"
 
+//go:linkname asmWFI asmWFI
+func asmWFI()
+
 // Run starts the REPL loop
 func Run() {
-	// Initialize the REPL console
+	// Initialize the REPL console with a prompt
 	Con.Init("> ")
 
+	// Initialize the USB keyboard
+	drivers.Keyboard.Init()
+
 	for {
-		// Poll for keyboard input
+		// Poll the USB keyboard
 		if key, ok := PollKey(); ok {
 			Con.HandleKey(key)
 		}
-		// Optional: small delay to reduce busy-waiting
+
+		// Wait for the next interrupt to reduce CPU usage
+		asmWFI()
 	}
 }
 
-// PollKey returns a single key press (ASCII) if available
+// PollKey returns a single ASCII key press from the USB keyboard
 func PollKey() (byte, bool) {
-	if key, ok := drivers.Keyboard.Poll(); ok {
-		return drivers.KeyToASCII(key, drivers.Keyboard.shift), true
+	if hid, pressed := drivers.Keyboard.Poll(); pressed {
+		return drivers.KeyToASCII(hid, drivers.Keyboard.shift), true
 	}
 	return 0, false
 }
