@@ -1,15 +1,18 @@
 package core
 
 import (
+	"sync"
 	"unsafe"
 )
 
 // MaxCores defines how many concurrent tasks we can run
-const MaxCores = 4
+const MaxCores = 8 // updated to support more cores
 
 var (
-	taskQueue   []*Task
-	currentTask [MaxCores]*Task
+	taskQueue       []*Task
+	currentTask     [MaxCores]*Task
+	coreReleased    [MaxCores]bool
+	coreReleaseLock sync.Mutex
 )
 
 // InitScheduler initializes empty structures
@@ -17,6 +20,30 @@ func InitScheduler() {
 	taskQueue = make([]*Task, 0, 16) // simple fixed-capacity queue
 	for i := range currentTask {
 		currentTask[i] = nil
+		coreReleased[i] = false
+	}
+}
+
+// ReleaseSecondaryCore signals a secondary core to start executing its scheduler
+func ReleaseSecondaryCore(coreID int) {
+	if coreID <= 0 || coreID >= MaxCores {
+		return // core 0 is primary, secondary cores are 1+
+	}
+	coreReleaseLock.Lock()
+	coreReleased[coreID] = true
+	coreReleaseLock.Unlock()
+}
+
+// WaitForRelease blocks the core until it is released
+func WaitForRelease(coreID int) {
+	for {
+		coreReleaseLock.Lock()
+		released := coreReleased[coreID]
+		coreReleaseLock.Unlock()
+		if released {
+			break
+		}
+		WFI() // wait for interrupt while spinning
 	}
 }
 

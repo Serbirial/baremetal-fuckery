@@ -8,6 +8,9 @@ import (
 	"sys/interrupts"
 )
 
+// MaxCores is the maximum cores your scheduler will handle
+const MaxCores = 8
+
 func KernelMain() {
 	// --- Initialize low-level kernel systems ---
 
@@ -33,20 +36,21 @@ func KernelMain() {
 	// --- Initialize the multi-core task scheduler ---
 	core.InitScheduler()
 
-	// --- Create REPL as an isolated user-space task ---
+	// --- Start secondary cores first ---
+	for coreID := 1; coreID < MaxCores; coreID++ {
+		// Release core by setting its entry point to RunCore(coreID)
+		core.ReleaseSecondaryCore(coreID)
+	}
+
+	// --- Create REPL as an isolated user-space task on core 0 ---
 	replTask := bareproc.CreateTask(root.Run, 0)
 	bareproc.RunTask(replTask)
 
-	// --- TODOS: start background kernel tasks ---
-	// e.g., timers, device polling, etc.
+	// --- Run primary core scheduler loop on core 0 ---
+	core.RunCore(0)
 
-	// --- Start per-core scheduling loops ---
-	for i := 0; i < core.MaxCores; i++ {
-		go core.RunCore(i) // each core handles its own tasks
-	}
-
-	// --- Kernel idle loop ---
+	// This point is never reached
 	for {
-		core.WFI() // idle until an interrupt occurs
+		core.WFI()
 	}
 }

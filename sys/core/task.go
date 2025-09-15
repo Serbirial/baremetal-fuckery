@@ -23,27 +23,31 @@ type Task struct {
 	Entry    func()    // Task entry function
 }
 
-// Create a new Task with a stack
+// nextStackAddr tracks the next free stack memory
+var nextStackAddr uintptr = 0x80000000
+
+// Create a new Task with stack allocation and memory setup
 func NewTask(entry func(), stackSize uint32) *Task {
 	if stackSize == 0 {
 		stackSize = DefaultStackSize
 	}
 
-	stackTop := AllocateStack(stackSize)
-
 	t := &Task{
-		Entry:    entry,
-		State:    TaskReady,
-		StackTop: stackTop,
-		StackBot: stackTop - uintptr(stackSize),
-		Core:     0xFFFFFFFF, // Not yet assigned to any core
+		Entry: entry,
+		State: TaskReady,
+		Core:  0xFFFFFFFF, // Not yet assigned
 	}
+
+	// Allocate memory for this task
+	AllocateMemory(t, stackSize)
+	ProtectMemory(t)
 
 	return t
 }
 
-// AllocateStack is a placeholder; replace with your actual memory allocator
+// AllocateStack returns the top of a new stack and updates nextStackAddr
 func AllocateStack(size uint32) uintptr {
-	// For now, just return a fake address
-	return 0x80000000 // TODO: implement real memory allocation
+	addr := nextStackAddr
+	nextStackAddr += uintptr(size)
+	return addr + uintptr(size) // return top of stack
 }
