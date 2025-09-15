@@ -1,0 +1,26 @@
+{
+  "inherits": ["cortex-m", "arm"],
+  "build-tags": ["rpi_zero2w", "baremetal"],
+  "llvm-target": "arm-none-eabi",
+  "goos": "linux",
+  "goarch": "arm",
+  "cpu": "cortex-a53",
+  "scheduler": "none",
+  "default-stack-size": 1024,
+  "serial": "uart0",
+  "linker": "arm-none-eabi-ld",
+  "linkerscript": "linker_rpi.ld",
+  "cflags": [
+    "-mcpu=cortex-a53",
+    "-marm",
+    "-mabi=aapcs",
+    "-fno-exceptions",
+    "-fno-unwind-tables",
+    "-fno-asynchronous-unwind-tables",
+    "-fomit-frame-pointer"
+  ],
+  "ldflags": [
+    "-T", "linker_rpi.ld"
+  ],
+  "emulator": "qemu-system-aarch64 -M raspi3b -serial stdio -kernel {bin}"
+}
